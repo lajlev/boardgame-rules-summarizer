@@ -52,9 +52,9 @@ Upload a board game rulebook PDF and get a concise, structured rules summary gen
    VITE_FIREBASE_PROJECT_ID=your-project-id
    ```
 
-4. Generate a password hash:
+4. Generate a password hash (must use Node.js to match the browser's Web Crypto API):
    ```bash
-   echo -n "your-password" | shasum -a 256 | cut -d' ' -f1
+   node -e "const c=require('crypto');console.log(c.createHash('sha256').update('your-password').digest('hex'))"
    ```
 
 5. Start the dev server:
@@ -90,7 +90,7 @@ The repo includes a GitHub Actions workflow that builds and deploys on every pus
 Generate a new SHA-256 hash and update `VITE_APP_PASSWORD_HASH`:
 
 ```bash
-echo -n "new-password" | shasum -a 256 | cut -d' ' -f1
+node -e "const c=require('crypto');console.log(c.createHash('sha256').update('new-password').digest('hex'))"
 ```
 
 Update the value in your `.env` (local) and in GitHub Secrets (production), then redeploy.
