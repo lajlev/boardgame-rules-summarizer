@@ -1,0 +1,71 @@
+@page {
+  size: A4;
+  margin: 1.5cm 2cm;
+}
+
+body {
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: 11pt;
+  line-height: 1.5;
+  color: #000;
+  background: #fff;
+}
+
+.no-print {
+  display: none !important;
+}
+
+.container {
+  max-width: 100%;
+  padding: 0;
+}
+
+.summary-content {
+  padding: 0;
+}
+
+.summary-content h2 {
+  font-size: 16pt;
+  margin-top: 0;
+  margin-bottom: 4pt;
+  page-break-after: avoid;
+}
+
+.summary-content h3 {
+  font-size: 12pt;
+  margin-top: 14pt;
+  margin-bottom: 4pt;
+  page-break-after: avoid;
+  color: #000;
+}
+
+.summary-content h4 {
+  font-size: 11pt;
+  margin-top: 10pt;
+  margin-bottom: 2pt;
+  page-break-after: avoid;
+}
+
+.summary-content p {
+  margin-bottom: 4pt;
+}
+
+.summary-content ul,
+.summary-content ol {
+  margin-left: 18pt;
+  margin-bottom: 4pt;
+}
+
+.summary-content li {
+  margin-bottom: 1pt;
+}
+
+.summary-content hr {
+  border: none;
+  border-top: 0.5pt solid #ccc;
+  margin: 10pt 0;
+}
+
+footer {
+  display: none;
+}

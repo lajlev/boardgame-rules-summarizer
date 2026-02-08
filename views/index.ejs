@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Board Game Rules Summarizer</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Board Game Rules Summarizer</h1>
+    <p class="subtitle">Upload a board game rulebook PDF to generate a concise rules summary.</p>
+
+    <form action="/upload" method="POST" enctype="multipart/form-data" id="upload-form">
+      <div class="upload-area" id="upload-area">
+        <label for="rulebook" class="upload-label">
+          <span class="upload-icon">&#128196;</span>
+          <span class="upload-text">Choose a PDF or drag it here</span>
+          <span class="upload-hint">Maximum file size: 20MB</span>
+        </label>
+        <input type="file" id="rulebook" name="rulebook" accept=".pdf,application/pdf" required hidden>
+        <p class="file-name" id="file-name"></p>
+      </div>
+      <button type="submit" id="submit-btn">Generate Summary</button>
+    </form>
+
+    <div class="loading" id="loading" hidden>
+      <div class="spinner"></div>
+      <p>Extracting text and generating summary...</p>
+      <p class="loading-hint">This may take up to a minute depending on the rulebook length.</p>
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById('upload-form');
+    const fileInput = document.getElementById('rulebook');
+    const fileName = document.getElementById('file-name');
+    const submitBtn = document.getElementById('submit-btn');
+    const loading = document.getElementById('loading');
+    const uploadArea = document.getElementById('upload-area');
+
+    // Show selected file name
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) {
+        fileName.textContent = fileInput.files[0].name;
+      }
+    });
+
+    // Click to select file
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    // Drag and drop
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      if (e.dataTransfer.files.length && e.dataTransfer.files[0].type === 'application/pdf') {
+        fileInput.files = e.dataTransfer.files;
+        fileName.textContent = e.dataTransfer.files[0].name;
+      }
+    });
+
+    // Show loading state on submit
+    form.addEventListener('submit', () => {
+      submitBtn.disabled = true;
+      form.querySelector('.upload-area').hidden = true;
+      submitBtn.hidden = true;
+      loading.hidden = false;
+    });
+  </script>
+</body>
+</html>

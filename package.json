@@ -1,0 +1,21 @@
+{
+  "name": "boardgame-rules-summarizer",
+  "version": "1.0.0",
+  "description": "Upload board game rules PDFs and generate structured rules summaries using GPT-5",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "dotenv": "^16.4.0",
+    "ejs": "^3.1.10",
+    "express": "^4.21.0",
+    "marked": "^15.0.0",
+    "multer": "^1.4.5-lts.1",
+    "nanoid": "^5.0.0",
+    "openai": "^4.70.0",
+    "pdf-parse": "^1.1.1"
+  }
+}
