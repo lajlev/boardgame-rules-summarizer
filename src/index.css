@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 20 14.3% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 14.3% 4.1%;
+    --primary: 24 9.8% 10%;
+    --primary-foreground: 60 9.1% 97.8%;
+    --secondary: 60 4.8% 95.9%;
+    --secondary-foreground: 24 9.8% 10%;
+    --muted: 60 4.8% 95.9%;
+    --muted-foreground: 25 5.3% 44.7%;
+    --accent: 60 4.8% 95.9%;
+    --accent-foreground: 24 9.8% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 60 9.1% 97.8%;
+    --border: 20 5.9% 90%;
+    --input: 20 5.9% 90%;
+    --ring: 20 14.3% 4.1%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Markdown content styles */
+.prose h2 {
+  @apply text-2xl font-bold mt-8 mb-1 tracking-tight;
+}
+.prose h2:first-child {
+  @apply mt-0;
+}
+.prose h3 {
+  @apply text-base font-semibold mt-6 mb-2 uppercase tracking-wider text-muted-foreground;
+}
+.prose h4 {
+  @apply text-base font-semibold mt-4 mb-1;
+}
+.prose p {
+  @apply mb-2 leading-relaxed;
+}
+.prose ul, .prose ol {
+  @apply ml-5 mb-2;
+}
+.prose ol {
+  @apply list-decimal;
+}
+.prose ul {
+  @apply list-disc;
+}
+.prose li {
+  @apply mb-0.5;
+}
+.prose li > ul, .prose li > ol {
+  @apply mt-0.5 mb-0.5;
+}
+.prose strong {
+  @apply font-semibold;
+}
+.prose hr {
+  @apply border-border my-6;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #000;
+    background: #fff;
+  }
+  @page {
+    size: A4;
+    margin: 1.5cm 2cm;
+  }
+  .prose h2 {
+    font-size: 16pt;
+    margin-top: 0;
+    page-break-after: avoid;
+  }
+  .prose h3 {
+    font-size: 12pt;
+    margin-top: 14pt;
+    page-break-after: avoid;
+    color: #000;
+  }
+  .prose h4 {
+    font-size: 11pt;
+    page-break-after: avoid;
+  }
+}
