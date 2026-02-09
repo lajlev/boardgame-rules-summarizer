@@ -27,7 +27,7 @@ async function extractTextFromPdf(file) {
   const pdfjsLib = await import("pdfjs-dist");
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
     "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url
+    import.meta.url,
   ).href;
 
   const arrayBuffer = await file.arrayBuffer();
@@ -88,7 +88,7 @@ export default function UploadForm() {
 
       if (!pdfText || pdfText.trim().length < 50) {
         throw new Error(
-          "Could not extract enough text from the PDF. It may be image-based."
+          "Could not extract enough text from the PDF. It may be image-based.",
         );
       }
 
@@ -199,7 +199,9 @@ export default function UploadForm() {
             type="file"
             accept=".pdf,application/pdf"
             className="hidden"
-            onChange={(e) => e.target.files.length && handleFile(e.target.files[0])}
+            onChange={(e) =>
+              e.target.files.length && handleFile(e.target.files[0])
+            }
           />
         </div>
 
