@@ -1,18 +1,15 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText } from "lucide-react";
+import { timeAgo } from "@/lib/time";
 
 export default function SummaryCard({ summary }) {
-  const date = new Date(summary.createdAt).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const date = timeAgo(summary.createdAt);
 
   return (
-    <Link to={`/summary/${summary.id}`}>
+    <Link to={`/summary/${summary.id}`} className="block">
       <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-        <CardContent className="p-4 flex items-center gap-3">
+        <CardContent className="!px-3 !py-2 flex items-center gap-3">
           <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="font-medium truncate">{summary.gameTitle}</p>

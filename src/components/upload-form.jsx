@@ -248,7 +248,7 @@ export default function UploadForm() {
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <Button onClick={handleSubmit} disabled={!file} className="w-full">
-          Generate Summary
+          Create New Rules Summary
         </Button>
       </CardContent>
     </Card>

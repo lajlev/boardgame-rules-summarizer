@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import UploadForm from "@/components/upload-form";
 import SummaryCard from "@/components/summary-card";
 import { getAllSummaries } from "@/lib/firebase";
+import ThemeToggle from "@/components/theme-toggle";
 
 export default function Home() {
   const [summaries, setSummaries] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const uploadRef = useRef(null);
 
   useEffect(() => {
     getAllSummaries()
@@ -18,22 +20,33 @@ export default function Home() {
   }, []);
 
   const filtered = summaries.filter((s) =>
-    s.gameTitle.toLowerCase().includes(search.toLowerCase())
+    s.gameTitle.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto px-4 py-12 space-y-10">
+        <div className="flex justify-end items-center gap-2">
+          <a
+            href="#generate"
+            onClick={(e) => {
+              e.preventDefault();
+              uploadRef.current?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" />
+            Generate Summary
+          </a>
+          <ThemeToggle />
+        </div>
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Board Game Rules Summarizer
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">Lajlev Rules 🤘</h1>
           <p className="text-muted-foreground">
-            Upload a rulebook PDF to generate a concise rules reference sheet.
+            Upload a rulebook PDF to get a concise rules summary in{" "}
+            <i>Lajlev</i> style.
           </p>
         </div>
-
-        <UploadForm />
 
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -62,12 +75,16 @@ export default function Home() {
                 : "No matching summaries found."}
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {filtered.map((s) => (
                 <SummaryCard key={s.id} summary={s} />
               ))}
             </div>
           )}
+        </div>
+
+        <div ref={uploadRef}>
+          <UploadForm />
         </div>
       </div>
     </div>
