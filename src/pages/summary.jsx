@@ -213,13 +213,13 @@ export default function SummaryPage() {
       <footer className="hidden print:block mt-8 pt-4 border-t border-gray-300">
         <div className="flex items-center gap-3">
           <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`https://rules.lajlev.com/summary/${id}`)}`}
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`https://rules.lillefar.com/summary/${id}`)}`}
             alt="QR code"
             className="w-16 h-16"
           />
           <div className="text-[8pt] text-gray-600">
             <p className="font-semibold">View online</p>
-            <p>rules.lajlev.com/summary/{id}</p>
+            <p>rules.lillefar.com/summary/{id}</p>
           </div>
         </div>
       </footer>
