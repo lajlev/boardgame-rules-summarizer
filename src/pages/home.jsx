@@ -25,7 +25,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-12 space-y-10">
+      <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12 space-y-8 sm:space-y-10">
         <div className="flex justify-end items-center gap-2">
           <a
             href="#generate"
@@ -36,13 +36,16 @@ export default function Home() {
             className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
           >
             <Plus className="w-4 h-4" />
-            Generate Summary
+            <span className="hidden sm:inline">Generate Summary</span>
+            <span className="sm:hidden">Generate</span>
           </a>
           <ThemeToggle />
         </div>
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Lajlev Rules 🤘</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Lajlev Rules 🤘
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Upload a rulebook PDF to get a concise rules summary in{" "}
             <i>Lajlev</i> style.
           </p>

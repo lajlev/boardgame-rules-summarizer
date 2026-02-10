@@ -94,6 +94,24 @@
     @apply border-border my-6;
 }
 
+/* Search highlight styles */
+.search-match {
+    background-color: rgba(250, 204, 21, 0.4);
+    border-radius: 2px;
+    color: inherit;
+}
+.dark .search-match {
+    background-color: rgba(161, 98, 7, 0.4);
+}
+.search-match-active {
+    background-color: rgb(250, 204, 21);
+
+    border-radius: 2px;
+}
+.dark .search-match-active {
+    background-color: rgb(161, 98, 7);
+}
+
 /* Print styles */
 @media print {
     .no-print {
