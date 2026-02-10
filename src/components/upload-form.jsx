@@ -29,16 +29,41 @@ async function extractTextFromPdf(file) {
     "pdfjs-dist/build/pdf.worker.min.mjs",
     import.meta.url,
   ).href;
+  console.log(
+    "[PDF] Starting text extraction for:",
+    file.name,
+    `(${(file.size / 1024).toFixed(1)} KB)`,
+  );
 
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  console.log(
+    "[PDF] ArrayBuffer created, size:",
+    arrayBuffer.byteLength,
+    "bytes",
+  );
+
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, verbosity: 0 })
+    .promise;
+  console.log("[PDF] Document loaded, pages:", pdf.numPages);
+
   const pages = [];
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    pages.push(content.items.map((item) => item.str).join(" "));
+    const pageText = content.items.map((item) => item.str).join(" ");
+    console.log(
+      `[PDF] Page ${i}/${pdf.numPages}: ${content.items.length} items, ${pageText.length} chars`,
+    );
+    pages.push(pageText);
   }
-  return pages.join("\n\n");
+
+  const fullText = pages.join("\n\n");
+  console.log(
+    "[PDF] Extraction complete. Total length:",
+    fullText.length,
+    "chars",
+  );
+  return fullText;
 }
 
 export default function UploadForm() {
@@ -97,6 +122,13 @@ export default function UploadForm() {
         dangerouslyAllowBrowser: true,
       });
 
+      console.log("[OpenAI] Sending request to model:", OPENAI_MODEL);
+      console.log(
+        "[OpenAI] Prompt length:",
+        SYSTEM_PROMPT.length + pdfText.length,
+        "chars",
+      );
+
       const completion = await openai.chat.completions.create({
         model: OPENAI_MODEL,
         messages: [
@@ -108,19 +140,27 @@ export default function UploadForm() {
         ],
       });
 
+      console.log("[OpenAI] Response received. Usage:", completion.usage);
+
       const markdown = completion.choices[0].message.content;
+      console.log("[OpenAI] Summary length:", markdown.length, "chars");
+
       const titleMatch = markdown.match(/^##\s+(.+?)(?:\s*\(|$)/m);
       const gameTitle = titleMatch
         ? titleMatch[1].trim()
         : file.name.replace(/\.pdf$/i, "");
+      console.log("[Summary] Game title:", gameTitle);
 
       const id = nanoid(10);
+      console.log("[Firestore] Saving summary with id:", id);
+
       await saveSummary(id, {
         gameTitle,
         originalFilename: file.name,
         markdown,
       });
 
+      console.log("[Firestore] Save complete. Navigating to summary.");
       navigate(`/summary/${id}`);
     } catch (err) {
       console.error(err);

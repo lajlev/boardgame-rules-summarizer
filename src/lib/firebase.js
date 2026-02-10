@@ -20,10 +20,17 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 export async function saveSummary(id, data) {
-  await setDoc(doc(db, "summaries", id), {
-    ...data,
-    createdAt: new Date().toISOString(),
-  });
+  const docRef = doc(db, "summaries", id);
+  const payload = { ...data, createdAt: new Date().toISOString() };
+
+  const timeout = new Promise((_, reject) =>
+    setTimeout(
+      () => reject(new Error("Firestore save timed out after 15s")),
+      15000,
+    ),
+  );
+
+  await Promise.race([setDoc(docRef, payload), timeout]);
 }
 
 export async function getSummary(id) {
