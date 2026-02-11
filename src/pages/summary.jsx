@@ -15,9 +15,10 @@ import {
   Sun,
   Pencil,
   ExternalLink,
+  LogIn,
   LogOut,
 } from "lucide-react";
-import LoginForm from "@/components/login-form";
+import AuthModal from "@/components/auth-modal";
 import { getSummary, updateSummary } from "@/lib/firebase";
 import { useAuth } from "@/contexts/auth-context";
 import { timeAgo } from "@/lib/time";
@@ -308,6 +309,29 @@ export default function SummaryPage() {
             <Printer className="w-4 h-4" />
           </Button>
 
+          {/* Sign in / out */}
+          {user ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={logout}
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setShowLoginModal(true)}
+              title="Sign In"
+            >
+              <LogIn className="w-4 h-4" />
+            </Button>
+          )}
+
           {/* Menu */}
           <div className="relative" ref={menuRef}>
             <Button
@@ -341,36 +365,13 @@ export default function SummaryPage() {
                   )}
                   {dark ? "Light mode" : "Dark mode"}
                 </button>
-                {user ? (
-                  <>
-                    <button
-                      onClick={startEditing}
-                      className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent"
-                    >
-                      <Pencil className="w-4 h-4" />
-                      Edit Summary
-                    </button>
-                    <button
-                      onClick={() => {
-                        logout();
-                        setMenuOpen(false);
-                      }}
-                      className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sign Out
-                    </button>
-                  </>
-                ) : (
+                {user && (
                   <button
-                    onClick={() => {
-                      setShowLoginModal(true);
-                      setMenuOpen(false);
-                    }}
+                    onClick={startEditing}
                     className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent"
                   >
                     <Pencil className="w-4 h-4" />
-                    Admin Login
+                    Edit Summary
                   </button>
                 )}
               </div>
@@ -430,22 +431,10 @@ export default function SummaryPage() {
         )}
       </header>
 
-      {/* Admin login modal */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 no-print">
-          <div className="bg-background border rounded-lg shadow-lg p-6 w-full max-w-sm mx-4">
-            <h3 className="text-sm font-semibold mb-3">Admin Login</h3>
-            <LoginForm onSuccess={() => setShowLoginModal(false)} />
-            <button
-              type="button"
-              className="mt-3 text-sm text-muted-foreground hover:text-foreground w-full text-center"
-              onClick={() => setShowLoginModal(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      <AuthModal
+        open={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
 
       <main className="max-w-3xl mx-auto px-4 py-10">
         {/* BGG Link */}

@@ -3,12 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, Lock, FileText, X } from "lucide-react";
+import { Upload, FileText, X } from "lucide-react";
 import Loader from "@/components/loader";
-import LoginForm from "@/components/login-form";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 import { saveSummary } from "@/lib/firebase";
-import { useAuth } from "@/contexts/auth-context";
 import { nanoid } from "nanoid";
 import OpenAI from "openai";
 
@@ -59,7 +57,6 @@ async function extractTextFromPdf(file) {
 }
 
 export default function UploadForm() {
-  const { user, loading: authLoading } = useAuth();
   const [files, setFiles] = useState([]);
   const [bggLink, setBggLink] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -168,24 +165,6 @@ export default function UploadForm() {
   };
 
   if (loading) return <Loader />;
-
-  if (authLoading) return null;
-
-  if (!user) {
-    return (
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Lock className="w-5 h-5" />
-            Generate New Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <LoginForm />
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="w-full max-w-md mx-auto">

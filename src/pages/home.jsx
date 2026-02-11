@@ -1,15 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, LogOut, LogIn } from "lucide-react";
 import UploadForm from "@/components/upload-form";
 import SummaryCard from "@/components/summary-card";
+import AuthModal from "@/components/auth-modal";
 import { getAllSummaries } from "@/lib/firebase";
+import { useAuth } from "@/contexts/auth-context";
 import ThemeToggle from "@/components/theme-toggle";
 
 export default function Home() {
+  const { user, loading: authLoading, logout } = useAuth();
   const [summaries, setSummaries] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const uploadRef = useRef(null);
 
   useEffect(() => {
@@ -27,18 +31,38 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12 space-y-8 sm:space-y-10">
         <div className="flex justify-end items-center gap-2">
-          <a
-            href="#generate"
-            onClick={(e) => {
-              e.preventDefault();
-              uploadRef.current?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Generate Summary</span>
-            <span className="sm:hidden">Generate</span>
-          </a>
+          {user && (
+            <a
+              href="#generate"
+              onClick={(e) => {
+                e.preventDefault();
+                uploadRef.current?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Generate Summary</span>
+              <span className="sm:hidden">Generate</span>
+            </a>
+          )}
+          {!authLoading &&
+            (user ? (
+              <button
+                onClick={logout}
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setAuthModalOpen(true)}
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign In</span>
+              </button>
+            ))}
           <ThemeToggle />
         </div>
         <div className="text-center space-y-2">
@@ -86,10 +110,14 @@ export default function Home() {
           )}
         </div>
 
-        <div ref={uploadRef}>
-          <UploadForm />
-        </div>
+        {user && (
+          <div ref={uploadRef}>
+            <UploadForm />
+          </div>
+        )}
       </div>
+
+      <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </div>
   );
 }
