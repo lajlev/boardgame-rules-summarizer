@@ -97,7 +97,9 @@ export default function AppHeader({
             Lajlev Rules
           </Link>
 
-          <Link to="/upload" className="mr-auto">
+          <div className="mr-auto" />
+
+          <Link to="/upload">
             <Button variant="outline" size="sm" className="h-8 text-xs">
               Create Summary
             </Button>
