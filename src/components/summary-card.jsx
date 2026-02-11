@@ -13,7 +13,10 @@ export default function SummaryCard({ summary }) {
           <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="font-medium truncate">{summary.gameTitle}</p>
-            <p className="text-xs text-muted-foreground">{date}</p>
+            <p className="text-[11px] text-muted-foreground/70">
+              {date}
+              {summary.createdBy?.name && <> · {summary.createdBy.name}</>}
+            </p>
           </div>
         </CardContent>
       </Card>

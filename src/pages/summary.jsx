@@ -244,9 +244,9 @@ export default function SummaryPage() {
 
       <footer className="border-t no-print">
         <div className="max-w-3xl mx-auto px-4 py-4">
-          <p className="text-xs text-muted-foreground">
-            Generated from <strong>{summary.originalFilename}</strong> on {date}
-            {summary.createdBy?.name && <> by {summary.createdBy.name}</>}
+          <p className="text-[11px] text-muted-foreground/70">
+            {summary.originalFilename} · {date}
+            {summary.createdBy?.name && <> · {summary.createdBy.name}</>}
           </p>
         </div>
       </footer>
