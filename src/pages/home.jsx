@@ -1,18 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import UploadForm from "@/components/upload-form";
 import SummaryCard from "@/components/summary-card";
 import AppHeader from "@/components/app-header";
 import { getAllSummaries } from "@/lib/firebase";
-import { useAuth } from "@/contexts/auth-context";
 
 export default function Home() {
-  const { user } = useAuth();
   const [summaries, setSummaries] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const uploadRef = useRef(null);
 
   useEffect(() => {
     getAllSummaries()
@@ -74,12 +70,6 @@ export default function Home() {
             </div>
           )}
         </div>
-
-        {user && (
-          <div ref={uploadRef}>
-            <UploadForm />
-          </div>
-        )}
       </div>
     </div>
   );

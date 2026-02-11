@@ -14,6 +14,7 @@ import {
   LogOut,
   Moon,
   Sun,
+  Upload,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-toggle";
 import AuthModal from "@/components/auth-modal";
@@ -92,9 +93,17 @@ export default function AppHeader({
         <div className="max-w-3xl mx-auto px-4 py-2 flex items-center gap-2">
           <Link
             to="/"
-            className="text-sm font-semibold text-foreground hover:text-foreground/80 mr-auto"
+            className="text-sm font-semibold text-foreground hover:text-foreground/80"
           >
             Lajlev Rules
+          </Link>
+
+          <Link
+            to="/upload"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mr-auto"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Upload
           </Link>
 
           {/* Desktop inline search */}
