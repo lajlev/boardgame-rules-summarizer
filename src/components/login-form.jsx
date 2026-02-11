@@ -20,6 +20,7 @@ export default function LoginForm({ onSuccess, defaultMode = "login" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { login, signup, loginWithGoogle } = useAuth();
 
@@ -27,14 +28,32 @@ export default function LoginForm({ onSuccess, defaultMode = "login" }) {
     e.preventDefault();
     setSubmitting(true);
     setError("");
+    setInfo("");
 
     try {
       if (mode === "signup") {
         await signup(email, password);
+        setInfo(
+          "Verification email sent. Please check your inbox and verify your email before signing in.",
+        );
+        setMode("login");
+        setPassword("");
       } else {
-        await login(email, password);
+        const cred = await login(email, password);
+        if (!cred.user.emailVerified) {
+          const { sendEmailVerification, signOut } = await import(
+            "firebase/auth"
+          );
+          const { auth } = await import("@/lib/firebase");
+          await sendEmailVerification(cred.user);
+          await signOut(auth);
+          setInfo(
+            "Please verify your email first. A new verification link has been sent.",
+          );
+          return;
+        }
+        onSuccess?.();
       }
-      onSuccess?.();
     } catch (err) {
       setError(
         ERROR_MESSAGES[err.code] ||
@@ -113,6 +132,9 @@ export default function LoginForm({ onSuccess, defaultMode = "login" }) {
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
         />
         {error && <p className="text-sm text-destructive">{error}</p>}
+        {info && (
+          <p className="text-sm text-blue-600 dark:text-blue-400">{info}</p>
+        )}
         <Button type="submit" disabled={submitting} className="w-full">
           {submitting
             ? mode === "signup"
