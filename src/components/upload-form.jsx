@@ -7,6 +7,7 @@ import { Upload, FileText, X } from "lucide-react";
 import Loader from "@/components/loader";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 import { saveSummary, findSummariesByFilename } from "@/lib/firebase";
+import { useAuth } from "@/contexts/auth-context";
 import { nanoid } from "nanoid";
 import OpenAI from "openai";
 
@@ -65,6 +66,7 @@ export default function UploadForm() {
   const [duplicates, setDuplicates] = useState([]);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const addFiles = async (newFiles) => {
     const pdfs = Array.from(newFiles).filter(
@@ -168,6 +170,11 @@ export default function UploadForm() {
         gameTitle,
         originalFilename: files.map((f) => f.name).join(", "),
         markdown,
+        createdBy: {
+          uid: user.uid,
+          name: user.displayName || null,
+          email: user.email,
+        },
       };
 
       if (bggLink.trim()) {
