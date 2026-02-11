@@ -2,127 +2,153 @@
   "master": {
     "tasks": [
       {
-        "id": "1",
-        "title": "Add Firebase Auth export to firebase configuration",
-        "description": "Configure Firebase Authentication in the existing firebase.js file by importing and exporting the auth instance",
-        "details": "Import getAuth from 'firebase/auth' and export the auth instance in src/lib/firebase.js. Add the following code:\n\n```javascript\nimport { getAuth } from 'firebase/auth';\n\n// Export auth instance\nexport const auth = getAuth(app);\n```\n\nEnsure this is added after the existing Firebase app initialization and before any other exports.",
-        "testStrategy": "Verify that the auth export is available by importing it in a test file. Check that Firebase Auth is properly initialized by logging the auth instance and confirming it has the expected properties and methods.",
+        "id": 9,
+        "title": "Memoize AuthContext value and stabilize function refs",
+        "description": "Optimize AuthContext to prevent unnecessary re-renders by memoizing the context value object and stabilizing function references",
+        "details": "In `src/contexts/auth-context.jsx`, wrap the context value object in `useMemo` with dependencies on relevant state variables. Use `useCallback` to stabilize function references for `login`, `signup`, `loginWithGoogle`, `logout`, and `canEdit`. This prevents creating new objects on every render which causes all `useAuth()` consumers to re-render unnecessarily. Example: `const contextValue = useMemo(() => ({ user, loading, login: loginCallback, ... }), [user, loading, loginCallback, ...]);`",
+        "testStrategy": "Use React DevTools Profiler to verify reduced re-renders of components using useAuth(). Test that authentication functions still work correctly after memoization.",
         "priority": "high",
         "dependencies": [],
-        "status": "done",
-        "subtasks": [],
-        "updatedAt": "2026-02-11T14:00:41.516Z"
+        "status": "pending",
+        "subtasks": []
       },
       {
-        "id": "2",
-        "title": "Create authentication context provider",
-        "description": "Implement React context for managing authentication state across the application with user state, loading state, and auth methods",
-        "details": "Create src/contexts/auth-context.jsx with the following structure:\n\n```javascript\nimport { createContext, useContext, useEffect, useState } from 'react';\nimport { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';\nimport { auth } from '../lib/firebase';\n\nconst AuthContext = createContext();\n\nexport function AuthProvider({ children }) {\n  const [user, setUser] = useState(null);\n  const [loading, setLoading] = useState(true);\n\n  useEffect(() => {\n    const unsubscribe = onAuthStateChanged(auth, (user) => {\n      setUser(user);\n      setLoading(false);\n    });\n    return unsubscribe;\n  }, []);\n\n  const login = async (email, password) => {\n    return signInWithEmailAndPassword(auth, email, password);\n  };\n\n  const logout = () => signOut(auth);\n\n  return (\n    <AuthContext.Provider value={{ user, loading, login, logout }}>\n      {children}\n    </AuthContext.Provider>\n  );\n}\n\nexport const useAuth = () => useContext(AuthContext);\n```",
-        "testStrategy": "Test the context by wrapping a test component with AuthProvider and verifying that useAuth() returns the expected object structure. Mock Firebase auth methods and test login/logout functionality. Verify loading states work correctly.",
+        "id": 10,
+        "title": "Debounce search input using useDeferredValue",
+        "description": "Implement search input debouncing to prevent filter computation from blocking typing",
+        "details": "In `src/pages/home.jsx`, import `useDeferredValue` from React 18 and apply it to the search string state: `const deferredSearchTerm = useDeferredValue(searchTerm);`. Use the deferred value for filtering computations while keeping the immediate value for the input field. This allows typing to remain responsive while filtering happens in the background without blocking the UI.",
+        "testStrategy": "Test typing performance with large datasets. Verify that search input remains responsive and filtering still works correctly. Use browser performance tools to confirm reduced main thread blocking.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Memoize SummaryCard component",
+        "description": "Wrap SummaryCard component with React.memo to prevent unnecessary re-renders during search/filter operations",
+        "details": "In `src/components/summary-card.jsx`, wrap the component export with `React.memo`: `export default React.memo(SummaryCard);`. This prevents cards from re-rendering when their props haven't changed during search/filter operations. Ensure props are properly structured to take advantage of shallow comparison.",
+        "testStrategy": "Use React DevTools Profiler to verify that SummaryCard components skip re-rendering when their individual props haven't changed during search operations. Test that card interactions still work correctly.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Memoize parsed markdown in Summary page",
+        "description": "Cache parsed markdown output to prevent re-parsing on every render",
+        "details": "In `src/pages/summary.jsx`, wrap the `marked(summary.markdown)` call in `useMemo` with `summary.markdown` as the dependency: `const parsedMarkdown = useMemo(() => marked(summary.markdown), [summary.markdown]);`. This prevents expensive markdown parsing on every component render when only other state changes.",
+        "testStrategy": "Verify that markdown content displays correctly and only re-parses when the markdown content actually changes. Test with large markdown documents to confirm performance improvement.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Split summaries into meta and content collections",
+        "description": "Create separate Firestore collections for metadata and content to reduce data transfer",
+        "details": "In `src/lib/firebase.js`, create a new `summaries-meta` collection schema with fields: `gameTitle`, `createdAt`, `createdBy`, `originalFilename`, `bggLink`, `gameTitleLower` (string), `filenamesLower` (array), `bggLinkLower` (string). Update `saveSummary()` and `updateSummary()` to use `writeBatch()` for atomic writes to both collections. Modify `getAllSummaries()` to query `summaries-meta`. Update `getSummary(id)` to read from both collections and merge data. Keep existing `summaries` collection with only `markdown` field.",
+        "testStrategy": "Test that all CRUD operations work correctly with the new dual-collection structure. Verify data consistency between collections. Test that existing functionality remains intact while reducing data transfer.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Create migration script for existing data",
+        "description": "Build a Node.js script to migrate existing summaries data to the new collection structure",
+        "details": "Create `scripts/migrate-summaries-meta.js` using Firebase Admin SDK. Read all documents from existing `summaries` collection, extract metadata fields, normalize text fields (lowercase), and write to `summaries-meta` collection using `writeBatch()` with 500-document batches (Firestore limit). Include error handling and progress logging. Script should be idempotent and handle partial failures gracefully.",
+        "testStrategy": "Test migration script on a copy of production data. Verify all documents are migrated correctly with proper field normalization. Test script idempotency by running multiple times. Validate data integrity after migration.",
         "priority": "high",
         "dependencies": [
-          "1"
+          13
         ],
-        "status": "done",
-        "subtasks": [],
-        "updatedAt": "2026-02-11T14:01:03.176Z"
+        "status": "pending",
+        "subtasks": []
       },
       {
-        "id": "3",
-        "title": "Create reusable login form component",
-        "description": "Build a login form component using existing shadcn UI components for email and password authentication",
-        "details": "Create src/components/login-form.jsx using existing shadcn Input and Button components:\n\n```javascript\nimport { useState } from 'react';\nimport { Input } from './ui/input';\nimport { Button } from './ui/button';\nimport { useAuth } from '../contexts/auth-context';\n\nexport function LoginForm({ onSuccess }) {\n  const [email, setEmail] = useState('');\n  const [password, setPassword] = useState('');\n  const [error, setError] = useState('');\n  const [loading, setLoading] = useState(false);\n  const { login } = useAuth();\n\n  const handleSubmit = async (e) => {\n    e.preventDefault();\n    setLoading(true);\n    setError('');\n    \n    try {\n      await login(email, password);\n      onSuccess?.();\n    } catch (error) {\n      setError(error.message);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  return (\n    <form onSubmit={handleSubmit} className=\"space-y-4\">\n      <Input\n        type=\"email\"\n        placeholder=\"Email\"\n        value={email}\n        onChange={(e) => setEmail(e.target.value)}\n        required\n      />\n      <Input\n        type=\"password\"\n        placeholder=\"Password\"\n        value={password}\n        onChange={(e) => setPassword(e.target.value)}\n        required\n      />\n      {error && <p className=\"text-red-500 text-sm\">{error}</p>}\n      <Button type=\"submit\" disabled={loading}>\n        {loading ? 'Signing in...' : 'Sign In'}\n      </Button>\n    </form>\n  );\n}\n```",
-        "testStrategy": "Test form submission with valid and invalid credentials. Verify error handling displays appropriate messages. Test loading states and form validation. Ensure onSuccess callback is triggered on successful login.",
-        "priority": "medium",
-        "dependencies": [
-          "2"
-        ],
-        "status": "done",
-        "subtasks": [],
-        "updatedAt": "2026-02-11T14:01:19.857Z"
-      },
-      {
-        "id": "4",
-        "title": "Wrap application with AuthProvider",
-        "description": "Integrate the AuthProvider context wrapper around the main App.jsx router to provide authentication state throughout the application",
-        "details": "Modify src/App.jsx to wrap the router with AuthProvider:\n\n```javascript\nimport { AuthProvider } from './contexts/auth-context';\n// ... other imports\n\nfunction App() {\n  return (\n    <AuthProvider>\n      <Router>\n        {/* existing routes */}\n      </Router>\n    </AuthProvider>\n  );\n}\n\nexport default App;\n```\n\nEnsure the AuthProvider wraps the entire router so all pages have access to authentication context.",
-        "testStrategy": "Verify that useAuth() hook works correctly in all pages and components. Test that authentication state persists across page navigation. Check that the loading state is properly handled during app initialization.",
+        "id": 15,
+        "title": "Implement server-side duplicate detection",
+        "description": "Replace client-side duplicate checking with efficient Firestore queries",
+        "details": "In `src/lib/firebase.js`, replace `findSummariesByFilename()` with Firestore query: `collection('summaries-meta').where('filenamesLower', 'array-contains', filename.toLowerCase())`. Replace `findSummariesByBggLink()` with `collection('summaries-meta').where('bggLinkLower', '==', bggLink.trim().toLowerCase())`. Update `src/components/upload-form.jsx` to use these new functions while maintaining the same API interface.",
+        "testStrategy": "Test duplicate detection with various filename formats and BGG links. Verify that case-insensitive matching works correctly. Test performance improvement by measuring query execution time vs previous full collection download.",
         "priority": "high",
         "dependencies": [
-          "2"
+          13
         ],
-        "status": "done",
-        "subtasks": [],
-        "updatedAt": "2026-02-11T14:01:36.624Z"
+        "status": "pending",
+        "subtasks": []
       },
       {
-        "id": "5",
-        "title": "Replace password gate in upload form",
-        "description": "Remove client-side password hashing from upload form and replace with Firebase authentication using the auth context",
-        "details": "Modify src/components/upload-form.jsx to:\n1. Remove hashPassword function and ADMIN_PASSWORD_HASH references\n2. Import and use useAuth hook\n3. Replace password gate logic with authentication check\n4. Show LoginForm when user is not authenticated\n\n```javascript\nimport { useAuth } from '../contexts/auth-context';\nimport { LoginForm } from './login-form';\n\n// Remove hashPassword function and password state\n// Replace password gate with:\nconst { user, loading } = useAuth();\n\nif (loading) {\n  return <div>Loading...</div>;\n}\n\nif (!user) {\n  return (\n    <div className=\"max-w-md mx-auto\">\n      <h2 className=\"text-xl font-bold mb-4\">Admin Login Required</h2>\n      <LoginForm />\n    </div>\n  );\n}\n\n// Rest of upload form component\n```",
-        "testStrategy": "Test that unauthenticated users see the login form. Verify that authenticated users can access the upload form. Test the loading state during authentication check. Ensure form submission works correctly after authentication.",
+        "id": 16,
+        "title": "Implement cursor-based pagination for home page",
+        "description": "Add paginated loading to the home page to reduce initial data transfer",
+        "details": "In `src/lib/firebase.js`, create `getSummariesPage(cursor, pageSize = 25)` function using `orderBy('createdAt', 'desc')`, `limit(pageSize)`, and optional `startAfter(cursor)` on `summaries-meta`. In `src/pages/home.jsx`, replace `getAllSummaries()` with paginated loading. Add 'Load more' button that fetches next page using the last document as cursor. Accumulate results in state array. Apply client-side search filtering only to currently loaded summaries.",
+        "testStrategy": "Test pagination with various page sizes. Verify that 'Load more' functionality works correctly and maintains proper sort order. Test client-side filtering on paginated data. Verify performance improvement in initial page load time.",
+        "priority": "high",
+        "dependencies": [
+          13
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Add server-side 'Mine' filter with composite index",
+        "description": "Implement efficient server-side filtering for user's own summaries",
+        "details": "In `src/lib/firebase.js`, create `getMySummariesPage(uid, cursor, pageSize)` using `where('createdBy.uid', '==', uid)` + `orderBy('createdAt', 'desc')` + `limit(pageSize)` on `summaries-meta`. This requires creating a composite Firestore index: collection `summaries-meta`, fields `createdBy.uid` ASC + `createdAt` DESC. In `src/pages/home.jsx`, use this function when 'Mine' toggle is active instead of client-side filtering.",
+        "testStrategy": "Create the required Firestore composite index. Test 'Mine' filter functionality with pagination. Verify that only user's summaries are returned. Test performance improvement vs client-side filtering on large datasets.",
         "priority": "medium",
         "dependencies": [
-          "3",
-          "4"
+          13,
+          16
         ],
-        "status": "done",
-        "subtasks": [],
-        "updatedAt": "2026-02-11T14:02:12.089Z"
+        "status": "pending",
+        "subtasks": []
       },
       {
-        "id": "6",
-        "title": "Replace admin login in summary page",
-        "description": "Remove hash-based admin login from summary page and implement Firebase authentication with login modal and logout functionality",
-        "details": "Modify src/pages/summary.jsx to:\n1. Remove old hash-based admin login logic\n2. Use useAuth hook for authentication state\n3. Show LoginForm in a modal for unauthenticated users\n4. Add logout button for authenticated users\n\n```javascript\nimport { useAuth } from '../contexts/auth-context';\nimport { LoginForm } from '../components/login-form';\nimport { Button } from '../components/ui/button';\n\nconst { user, loading, logout } = useAuth();\n\n// Add logout button in header/nav area:\n{user && (\n  <Button onClick={logout} variant=\"outline\">\n    Logout\n  </Button>\n)}\n\n// Replace admin login section with:\nif (loading) {\n  return <div>Loading...</div>;\n}\n\nif (!user) {\n  return (\n    <div className=\"max-w-md mx-auto mt-8\">\n      <h2 className=\"text-xl font-bold mb-4\">Admin Access Required</h2>\n      <LoginForm />\n    </div>\n  );\n}\n```",
-        "testStrategy": "Test that unauthenticated users see the login form. Verify logout functionality works correctly. Test that authenticated users can access summary data. Ensure proper loading states during authentication transitions.",
+        "id": 18,
+        "title": "Implement in-memory cache with TTL",
+        "description": "Add caching layer for summary metadata queries to improve navigation performance",
+        "details": "Create `src/lib/cache.js` or add to `src/lib/firebase.js` a simple cache using Map + timestamp with 60-second TTL. Cache key based on query parameters (cursor + mine filter). Implement cache invalidation on save/update/delete operations. Cache should store query results for `getSummariesPage()` and `getMySummariesPage()`. Include cache hit/miss logging for debugging.",
+        "testStrategy": "Test cache functionality with various query combinations. Verify TTL expiration works correctly. Test cache invalidation on data mutations. Measure performance improvement for back-navigation scenarios.",
         "priority": "medium",
         "dependencies": [
-          "3",
-          "4"
+          16
         ],
-        "status": "done",
-        "subtasks": [],
-        "updatedAt": "2026-02-11T14:03:18.927Z"
+        "status": "pending",
+        "subtasks": []
       },
       {
-        "id": "7",
-        "title": "Clean up legacy password environment variables",
-        "description": "Remove all references to old password hash environment variables from configuration files and deployment settings",
-        "details": "Remove the following environment variables from all configuration files:\n1. Remove VITE_APP_PASSWORD_HASH and VITE_ADMIN_PASSWORD_HASH from .env file\n2. Remove these variables from .env.example file\n3. Update deploy.yml to remove password hash environment variable references\n4. Delete corresponding GitHub secrets from repository settings\n5. Remove any remaining references to these variables in documentation\n\nEnsure no code references remain to:\n- VITE_APP_PASSWORD_HASH\n- VITE_ADMIN_PASSWORD_HASH\n- hashPassword function\n- Any SHA-256 password hashing logic",
-        "testStrategy": "Search codebase for any remaining references to removed environment variables. Verify that build process doesn't reference deleted variables. Test that deployment pipeline works without the removed environment variables. Confirm GitHub secrets are properly deleted.",
+        "id": 19,
+        "title": "Implement route-based code splitting",
+        "description": "Split heavy dependencies into separate chunks using React.lazy and Suspense",
+        "details": "In `src/App.jsx`, use `React.lazy()` to dynamically import Upload and Summary pages: `const UploadPage = React.lazy(() => import('./pages/upload'));`. Wrap routes with `Suspense` component with appropriate fallback UI. Keep Home page eagerly loaded. This separates heavy dependencies (pdfjs-dist ~1.3MB, openai ~100KB, marked ~30KB) from the initial bundle.",
+        "testStrategy": "Test that lazy-loaded routes work correctly with loading states. Verify bundle size reduction in initial chunk. Test that navigation between routes works smoothly with appropriate loading indicators.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 20,
+        "title": "Configure Vite manual chunk splitting",
+        "description": "Optimize bundle structure for better caching using manual chunk configuration",
+        "details": "In `vite.config.js`, add `build.rollupOptions.output.manualChunks` configuration to create separate chunks: `react` chunk (react + react-dom), `firebase` chunk (firebase/app + firebase/auth + firebase/firestore), `router` chunk (react-router-dom). This enables long-term caching of vendor dependencies across deployments. Configure chunk naming for better cache invalidation.",
+        "testStrategy": "Build the application and verify that separate vendor chunks are created as expected. Test that chunk loading works correctly in production. Verify improved caching behavior by checking that vendor chunks don't change between deployments when only application code changes.",
         "priority": "low",
-        "dependencies": [
-          "5",
-          "6"
-        ],
-        "status": "done",
-        "subtasks": [],
-        "updatedAt": "2026-02-11T14:03:52.414Z"
-      },
-      {
-        "id": "8",
-        "title": "Build verification and deployment",
-        "description": "Verify that the application builds successfully with all Firebase authentication changes and deploy the updated code",
-        "details": "Complete the migration by:\n1. Run `npm run build` to ensure the application builds without errors\n2. Test the build locally to verify all authentication flows work correctly\n3. Verify that no console errors related to missing environment variables appear\n4. Test login/logout functionality in the built application\n5. Commit all changes with a descriptive commit message\n6. Push changes to the repository\n7. Monitor deployment pipeline for successful deployment\n8. Verify authentication works in the deployed environment\n\nCommit message should be: 'Replace client-side password hashing with Firebase Email/Password Authentication'\n\nEnsure Firebase project has the admin user account created for authentication.",
-        "testStrategy": "Run full end-to-end testing of authentication flows. Test build process completes without errors. Verify deployment succeeds and authentication works in production. Test that old password hash methods are completely removed and non-functional.",
-        "priority": "medium",
-        "dependencies": [
-          "7"
-        ],
-        "status": "done",
-        "subtasks": [],
-        "updatedAt": "2026-02-11T14:04:28.257Z"
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
       }
     ],
     "metadata": {
-      "version": "1.0.0",
-      "lastModified": "2026-02-11T14:04:28.257Z",
-      "taskCount": 8,
-      "completedCount": 8,
-      "tags": [
-        "master"
-      ]
+      "created": "2026-02-11T15:59:57.786Z",
+      "updated": "2026-02-11T15:59:57.786Z",
+      "description": "Tasks for master context"
     }
   }
 }

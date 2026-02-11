@@ -6,7 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, X } from "lucide-react";
 import Loader from "@/components/loader";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
-import { saveSummary, findSummariesByFilename } from "@/lib/firebase";
+import {
+  saveSummary,
+  findSummariesByFilename,
+  findSummariesByBggLink,
+} from "@/lib/firebase";
 import { useAuth } from "@/contexts/auth-context";
 import { nanoid } from "nanoid";
 import OpenAI from "openai";
@@ -64,6 +68,7 @@ export default function UploadForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [duplicates, setDuplicates] = useState([]);
+  const [bggDuplicates, setBggDuplicates] = useState([]);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -102,6 +107,16 @@ export default function UploadForm() {
       );
       return updated;
     });
+  };
+
+  const checkBggLink = async (link) => {
+    const trimmed = link.trim();
+    if (!trimmed) {
+      setBggDuplicates([]);
+      return;
+    }
+    const matches = await findSummariesByBggLink(trimmed);
+    setBggDuplicates(matches);
   };
 
   const handleDrop = useCallback((e) => {
@@ -268,6 +283,7 @@ export default function UploadForm() {
             placeholder="BGG link (optional)"
             value={bggLink}
             onChange={(e) => setBggLink(e.target.value)}
+            onBlur={(e) => checkBggLink(e.target.value)}
           />
         </div>
 
@@ -290,6 +306,30 @@ export default function UploadForm() {
                   className="underline underline-offset-2 hover:text-yellow-900 dark:hover:text-yellow-100"
                 >
                   {dup.summaries[0].gameTitle}
+                </a>
+              </p>
+            ))}
+            <p className="text-xs text-yellow-600 dark:text-yellow-400 pt-1">
+              You can still upload to create a new summary.
+            </p>
+          </div>
+        )}
+
+        {bggDuplicates.length > 0 && (
+          <div className="rounded-md border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 p-3 space-y-1">
+            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+              A summary with this BGG link already exists:
+            </p>
+            {bggDuplicates.map((dup) => (
+              <p
+                key={dup.id}
+                className="text-sm text-yellow-700 dark:text-yellow-300"
+              >
+                <a
+                  href={`/summary/${dup.id}`}
+                  className="underline underline-offset-2 hover:text-yellow-900 dark:hover:text-yellow-100"
+                >
+                  {dup.gameTitle}
                 </a>
               </p>
             ))}

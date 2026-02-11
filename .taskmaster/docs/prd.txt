@@ -1,15 +1,52 @@
-Replace client-side password hashing with Firebase Email/Password Authentication.
+# Performance Optimization: Scale to 1000+ Summaries
 
-Current state: The app uses SHA-256 hashing of a password compared against VITE_ADMIN_PASSWORD_HASH env var. This is insecure (hash visible in JS bundle) and fragile.
+## Problem
 
-Goal: Use Firebase Auth Email/Password sign-in with a single admin account. Share auth state across pages via React context. Update Firestore security rules. Clean up old password hash env vars.
+Every data fetch calls `getAllSummaries()` which downloads the entire `summaries` Firestore collection including full markdown content (~5KB+ per doc). At 1000 docs that's ~5MB per call. This function is used by the home page listing, filename duplicate check, and BGG link duplicate check. There is no pagination, no caching, no server-side filtering, and no code splitting. The app becomes sluggish well before 1000 summaries.
 
-Tasks:
-1. Add Firebase Auth export to src/lib/firebase.js - Import getAuth from firebase/auth, export auth instance
-2. Create auth context at src/contexts/auth-context.jsx - React context with onAuthStateChanged listener, exposes { user, loading, login, logout }
-3. Create reusable login form at src/components/login-form.jsx - Email + password form using existing shadcn Input/Button components
-4. Wrap App.jsx router with AuthProvider
-5. Replace password gate in src/components/upload-form.jsx - Remove hashPassword/ADMIN_PASSWORD_HASH, use useAuth() hook, show LoginForm when not logged in
-6. Replace admin login in src/pages/summary.jsx - Remove old hash-based admin login, use useAuth(), show LoginForm in modal, add Logout option
-7. Clean up old env vars - Remove VITE_APP_PASSWORD_HASH and VITE_ADMIN_PASSWORD_HASH from .env, .env.example, deploy.yml, and delete GitHub secrets
-8. Build verification - npm run build succeeds, commit and push
+## Goals
+
+- Home page data transfer: ~5MB → ~50KB
+- Home page load time: 3-8s → <500ms
+- Initial JS bundle: 936KB → ~300-400KB
+- Duplicate check transfer: ~5MB/check → ~1KB
+- Firestore reads per home visit: 1000 → 25
+
+## Technical Context
+
+- Stack: React 18, Vite 6, Firebase/Firestore, Tailwind CSS, react-router-dom v7, marked, pdfjs-dist, OpenAI SDK
+- Hosted on GitHub Pages (static, no server/cloud functions)
+- Firestore client SDK does NOT support field projection (you always get the full document)
+- Key files: `src/lib/firebase.js`, `src/pages/home.jsx`, `src/pages/summary.jsx`, `src/components/upload-form.jsx`, `src/components/summary-card.jsx`, `src/contexts/auth-context.jsx`, `src/App.jsx`, `vite.config.js`
+
+## Requirements
+
+### Phase 1: Quick Wins (no structural changes)
+
+1. **Memoize AuthContext value** — In `src/contexts/auth-context.jsx`, wrap the context value object in `useMemo` and stabilize function refs (`login`, `signup`, `loginWithGoogle`, `logout`, `canEdit`) with `useCallback`. Currently a new object is created every render, causing all `useAuth()` consumers to re-render unnecessarily.
+
+2. **Debounce search input** — In `src/pages/home.jsx`, use React 18's `useDeferredValue` on the search string so the filter computation doesn't block typing. Zero additional dependencies.
+
+3. **Memoize SummaryCard** — In `src/components/summary-card.jsx`, wrap the component export with `React.memo` so cards skip re-rendering during search/filter changes when their props haven't changed.
+
+4. **Memoize parsed markdown** — In `src/pages/summary.jsx`, wrap the `marked(summary.markdown)` call in `useMemo` (keyed on `summary.markdown`) so it doesn't re-parse on every render.
+
+### Phase 2: Reduce Data Transfer (the big win)
+
+5. **Split into `summaries` + `summaries-meta` collections** — In `src/lib/firebase.js`, create a lightweight `summaries-meta` Firestore collection storing only listing/search fields: `gameTitle`, `createdAt`, `createdBy`, `originalFilename`, `bggLink`, plus normalized fields `gameTitleLower` (string), `filenamesLower` (array of lowercase filenames), `bggLinkLower` (lowercase string). The existing `summaries` collection keeps only `markdown`. Update `saveSummary()` and `updateSummary()` to write both collections atomically using `writeBatch`. Update `getAllSummaries()` to query `summaries-meta` instead. `getSummary(id)` should read from both collections and merge the data.
+
+6. **Create migration script** — Create a one-time Node.js script (`scripts/migrate-summaries-meta.js`) that reads all existing `summaries` documents and writes corresponding `summaries-meta` docs. Use Firestore `writeBatch` with batches of 500 (Firestore limit). The script should use Firebase Admin SDK.
+
+7. **Server-side duplicate detection** — In `src/lib/firebase.js`, replace `findSummariesByFilename()` with a Firestore query: `where("filenamesLower", "array-contains", filename.toLowerCase())` on `summaries-meta`. Replace `findSummariesByBggLink()` with `where("bggLinkLower", "==", bggLink.trim().toLowerCase())` on `summaries-meta`. Update `src/components/upload-form.jsx` to use these new functions (API stays the same, just faster).
+
+8. **Cursor-based pagination on home page** — In `src/lib/firebase.js`, create a `getSummariesPage(cursor, pageSize)` function that queries `summaries-meta` with `orderBy("createdAt", "desc")`, `limit(pageSize)`, and optional `startAfter(cursor)`. Default page size 25. In `src/pages/home.jsx`, replace the single `getAllSummaries()` call with paginated loading. Add a "Load more" button that fetches the next page. Accumulate results in state. Client-side search filtering applies only to loaded summaries.
+
+9. **Server-side "Mine" filter** — In `src/lib/firebase.js`, create a `getMySummariesPage(uid, cursor, pageSize)` function using `where("createdBy.uid", "==", uid)` + `orderBy("createdAt", "desc")` + `limit(pageSize)` on `summaries-meta`. This requires a composite Firestore index: collection `summaries-meta`, fields `createdBy.uid` ASC + `createdAt` DESC. In `src/pages/home.jsx`, when "Mine" toggle is active, use this function instead of the default query.
+
+10. **In-memory cache with TTL** — In `src/lib/firebase.js` (or new `src/lib/cache.js`), implement a simple cache (Map + timestamp) for summaries-meta list queries. TTL of 60 seconds. Cache key based on query parameters (page cursor + mine filter). Invalidate cache on save/update/delete operations. This makes back-navigation to home instant.
+
+### Phase 3: Bundle Optimization
+
+11. **Route-based code splitting** — In `src/App.jsx`, use `React.lazy()` + `Suspense` for the Upload and Summary pages. These pull in heavy dependencies (pdfjs-dist ~1.3MB, openai ~100KB, marked ~30KB) that the home page doesn't need. Keep Home page eagerly loaded.
+
+12. **Vite manual chunk splitting** — In `vite.config.js`, add `build.rollupOptions.output.manualChunks` to split vendor code: `react` chunk (react + react-dom), `firebase` chunk (firebase/app + firebase/auth + firebase/firestore), `router` chunk (react-router-dom). This enables long-term caching of vendor chunks across deploys.

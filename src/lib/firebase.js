@@ -73,3 +73,12 @@ export async function findSummariesByFilename(filename) {
       .some((f) => f.toLowerCase() === filename.toLowerCase()),
   );
 }
+
+export async function findSummariesByBggLink(bggLink) {
+  const all = await getAllSummaries();
+  return all.filter(
+    (s) =>
+      s.bggLink &&
+      s.bggLink.trim().toLowerCase() === bggLink.trim().toLowerCase(),
+  );
+}
