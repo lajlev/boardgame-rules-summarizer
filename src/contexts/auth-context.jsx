@@ -4,8 +4,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   GoogleAuthProvider,
   signOut,
 } from "firebase/auth";
@@ -19,8 +18,6 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Handle redirect result from Google sign-in
-    getRedirectResult(auth).catch(() => {});
     return onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
@@ -37,7 +34,7 @@ export function AuthProvider({ children }) {
     return cred;
   };
 
-  const loginWithGoogle = () => signInWithRedirect(auth, googleProvider);
+  const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
 
   const logout = () => signOut(auth);
 
