@@ -1,0 +1,15 @@
+Replace client-side password hashing with Firebase Email/Password Authentication.
+
+Current state: The app uses SHA-256 hashing of a password compared against VITE_ADMIN_PASSWORD_HASH env var. This is insecure (hash visible in JS bundle) and fragile.
+
+Goal: Use Firebase Auth Email/Password sign-in with a single admin account. Share auth state across pages via React context. Update Firestore security rules. Clean up old password hash env vars.
+
+Tasks:
+1. Add Firebase Auth export to src/lib/firebase.js - Import getAuth from firebase/auth, export auth instance
+2. Create auth context at src/contexts/auth-context.jsx - React context with onAuthStateChanged listener, exposes { user, loading, login, logout }
+3. Create reusable login form at src/components/login-form.jsx - Email + password form using existing shadcn Input/Button components
+4. Wrap App.jsx router with AuthProvider
+5. Replace password gate in src/components/upload-form.jsx - Remove hashPassword/ADMIN_PASSWORD_HASH, use useAuth() hook, show LoginForm when not logged in
+6. Replace admin login in src/pages/summary.jsx - Remove old hash-based admin login, use useAuth(), show LoginForm in modal, add Logout option
+7. Clean up old env vars - Remove VITE_APP_PASSWORD_HASH and VITE_ADMIN_PASSWORD_HASH from .env, .env.example, deploy.yml, and delete GitHub secrets
+8. Build verification - npm run build succeeds, commit and push

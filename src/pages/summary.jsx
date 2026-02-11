@@ -15,23 +15,16 @@ import {
   Sun,
   Pencil,
   ExternalLink,
+  LogOut,
 } from "lucide-react";
+import LoginForm from "@/components/login-form";
 import { getSummary, updateSummary } from "@/lib/firebase";
+import { useAuth } from "@/contexts/auth-context";
 import { timeAgo } from "@/lib/time";
-
-const ADMIN_PASSWORD_HASH = import.meta.env.VITE_ADMIN_PASSWORD_HASH;
-
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
 
 export default function SummaryPage() {
   const { id } = useParams();
+  const { user, logout } = useAuth();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -48,11 +41,8 @@ export default function SummaryPage() {
     );
   });
 
-  // Admin state
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [adminPassword, setAdminPassword] = useState("");
-  const [adminError, setAdminError] = useState("");
+  // Edit state
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editMarkdown, setEditMarkdown] = useState("");
   const [editBggLink, setEditBggLink] = useState("");
@@ -157,20 +147,6 @@ export default function SummaryPage() {
       setSearchOpen(false);
     } else {
       setSearchOpen(true);
-    }
-  };
-
-  const handleAdminLogin = async (e) => {
-    e.preventDefault();
-    const hash = await hashPassword(adminPassword);
-    if (hash === ADMIN_PASSWORD_HASH) {
-      setIsAdmin(true);
-      setShowAdminLogin(false);
-      setAdminPassword("");
-      setAdminError("");
-      setMenuOpen(false);
-    } else {
-      setAdminError("Incorrect password.");
     }
   };
 
@@ -365,18 +341,30 @@ export default function SummaryPage() {
                   )}
                   {dark ? "Light mode" : "Dark mode"}
                 </button>
-                {isAdmin ? (
-                  <button
-                    onClick={startEditing}
-                    className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Edit Summary
-                  </button>
+                {user ? (
+                  <>
+                    <button
+                      onClick={startEditing}
+                      className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Edit Summary
+                    </button>
+                    <button
+                      onClick={() => {
+                        logout();
+                        setMenuOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  </>
                 ) : (
                   <button
                     onClick={() => {
-                      setShowAdminLogin(true);
+                      setShowLoginModal(true);
                       setMenuOpen(false);
                     }}
                     className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent"
@@ -443,39 +431,18 @@ export default function SummaryPage() {
       </header>
 
       {/* Admin login modal */}
-      {showAdminLogin && (
+      {showLoginModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 no-print">
           <div className="bg-background border rounded-lg shadow-lg p-6 w-full max-w-sm mx-4">
             <h3 className="text-sm font-semibold mb-3">Admin Login</h3>
-            <form onSubmit={handleAdminLogin} className="space-y-3">
-              <Input
-                type="password"
-                placeholder="Enter admin password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                autoFocus
-              />
-              {adminError && (
-                <p className="text-sm text-destructive">{adminError}</p>
-              )}
-              <div className="flex gap-2 justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowAdminLogin(false);
-                    setAdminPassword("");
-                    setAdminError("");
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm">
-                  Login
-                </Button>
-              </div>
-            </form>
+            <LoginForm onSuccess={() => setShowLoginModal(false)} />
+            <button
+              type="button"
+              className="mt-3 text-sm text-muted-foreground hover:text-foreground w-full text-center"
+              onClick={() => setShowLoginModal(false)}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

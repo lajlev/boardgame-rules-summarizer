@@ -5,23 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, Lock, FileText, X } from "lucide-react";
 import Loader from "@/components/loader";
+import LoginForm from "@/components/login-form";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 import { saveSummary } from "@/lib/firebase";
+import { useAuth } from "@/contexts/auth-context";
 import { nanoid } from "nanoid";
 import OpenAI from "openai";
 
-const ADMIN_PASSWORD_HASH = import.meta.env.VITE_ADMIN_PASSWORD_HASH;
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const OPENAI_MODEL = import.meta.env.VITE_OPENAI_MODEL || "gpt-5";
-
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
 
 async function extractTextFromPdf(file) {
   const pdfjsLib = await import("pdfjs-dist");
@@ -67,9 +59,7 @@ async function extractTextFromPdf(file) {
 }
 
 export default function UploadForm() {
-  const [unlocked, setUnlocked] = useState(false);
-  const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const { user, loading: authLoading } = useAuth();
   const [files, setFiles] = useState([]);
   const [bggLink, setBggLink] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -77,17 +67,6 @@ export default function UploadForm() {
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
-
-  const handleUnlock = async (e) => {
-    e.preventDefault();
-    const hash = await hashPassword(password);
-    if (hash === ADMIN_PASSWORD_HASH) {
-      setUnlocked(true);
-      setPasswordError("");
-    } else {
-      setPasswordError("Incorrect password.");
-    }
-  };
 
   const addFiles = (newFiles) => {
     const pdfs = Array.from(newFiles).filter(
@@ -117,7 +96,6 @@ export default function UploadForm() {
     setError("");
 
     try {
-      // Extract text from all PDFs
       const allTexts = [];
       for (const file of files) {
         const pdfText = await extractTextFromPdf(file);
@@ -191,7 +169,9 @@ export default function UploadForm() {
 
   if (loading) return <Loader />;
 
-  if (!unlocked) {
+  if (authLoading) return null;
+
+  if (!user) {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
@@ -201,18 +181,7 @@ export default function UploadForm() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleUnlock} className="flex gap-2">
-            <Input
-              type="password"
-              placeholder="Enter admin password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <Button type="submit">Unlock</Button>
-          </form>
-          {passwordError && (
-            <p className="text-sm text-destructive mt-2">{passwordError}</p>
-          )}
+          <LoginForm />
         </CardContent>
       </Card>
     );
