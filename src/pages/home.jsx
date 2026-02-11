@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import SummaryCard from "@/components/summary-card";
 import AppHeader from "@/components/app-header";
 import { getAllSummaries } from "@/lib/firebase";
+import { useAuth } from "@/contexts/auth-context";
 
 export default function Home() {
+  const { user } = useAuth();
   const [summaries, setSummaries] = useState([]);
   const [search, setSearch] = useState("");
+  const [showMineOnly, setShowMineOnly] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,9 +21,10 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = summaries.filter((s) =>
-    s.gameTitle.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = summaries.filter((s) => {
+    if (showMineOnly && user && s.createdBy?.uid !== user.uid) return false;
+    return s.gameTitle.toLowerCase().includes(search.toLowerCase());
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,6 +55,16 @@ export default function Home() {
                 className="pl-9"
               />
             </div>
+            {user && (
+              <Button
+                variant={showMineOnly ? "default" : "outline"}
+                size="sm"
+                className="h-8 text-xs shrink-0"
+                onClick={() => setShowMineOnly(!showMineOnly)}
+              >
+                Mine
+              </Button>
+            )}
           </div>
 
           {loading ? (
