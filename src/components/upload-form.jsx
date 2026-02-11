@@ -172,7 +172,7 @@ export default function UploadForm() {
         markdown,
         createdBy: {
           uid: user.uid,
-          name: user.displayName || null,
+          name: user.displayName || user.email,
           email: user.email,
         },
       };
