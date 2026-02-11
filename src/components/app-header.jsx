@@ -15,6 +15,7 @@ import {
   Moon,
   Sun,
   FilePlus,
+  Trash2,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-toggle";
 import AuthModal from "@/components/auth-modal";
@@ -55,6 +56,7 @@ export default function AppHeader({
   // Menu items (optional — summary page)
   onDownloadMarkdown,
   onEditSummary,
+  onDeleteSummary,
 }) {
   const { user, loading: authLoading, logout } = useAuth();
   const { dark, toggle: toggleTheme } = useTheme();
@@ -275,7 +277,7 @@ export default function AppHeader({
                     <FileDown className="w-4 h-4" />
                     Download Markdown
                   </button>
-                  {user && onEditSummary && (
+                  {onEditSummary && (
                     <button
                       onClick={() => {
                         onEditSummary();
@@ -285,6 +287,18 @@ export default function AppHeader({
                     >
                       <Pencil className="w-4 h-4" />
                       Edit Summary
+                    </button>
+                  )}
+                  {onDeleteSummary && (
+                    <button
+                      onClick={() => {
+                        onDeleteSummary();
+                        setMenuOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete Summary
                     </button>
                   )}
                 </div>

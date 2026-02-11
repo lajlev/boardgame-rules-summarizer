@@ -12,6 +12,7 @@ import { auth } from "@/lib/firebase";
 
 const AuthContext = createContext();
 const googleProvider = new GoogleAuthProvider();
+const ADMIN_EMAILS = ["lajlev@gmail.com"];
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -38,9 +39,26 @@ export function AuthProvider({ children }) {
 
   const logout = () => signOut(auth);
 
+  const isAdmin = user ? ADMIN_EMAILS.includes(user.email) : false;
+
+  const canEdit = (summary) => {
+    if (!user) return false;
+    if (isAdmin) return true;
+    return summary?.createdBy?.uid === user.uid;
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, signup, loginWithGoogle, logout }}
+      value={{
+        user,
+        loading,
+        login,
+        signup,
+        loginWithGoogle,
+        logout,
+        isAdmin,
+        canEdit,
+      }}
     >
       {children}
     </AuthContext.Provider>

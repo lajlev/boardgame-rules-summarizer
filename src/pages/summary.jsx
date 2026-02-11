@@ -1,17 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { marked } from "marked";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ExternalLink } from "lucide-react";
 import AppHeader from "@/components/app-header";
-import { getSummary, updateSummary } from "@/lib/firebase";
+import { getSummary, updateSummary, deleteSummary } from "@/lib/firebase";
 import { useAuth } from "@/contexts/auth-context";
 import { timeAgo } from "@/lib/time";
 
 export default function SummaryPage() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { canEdit } = useAuth();
+  const navigate = useNavigate();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -161,6 +162,18 @@ export default function SummaryPage() {
     );
   }
 
+  const handleDelete = async () => {
+    if (!confirm(`Delete "${summary.gameTitle}"? This cannot be undone.`))
+      return;
+    try {
+      await deleteSummary(id);
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete: " + err.message);
+    }
+  };
+
   const handleDownloadMarkdown = () => {
     const blob = new Blob([summary.markdown], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
@@ -187,7 +200,8 @@ export default function SummaryPage() {
         searchInputMobileRef={searchInputMobileRef}
         onPrint={() => window.print()}
         onDownloadMarkdown={handleDownloadMarkdown}
-        onEditSummary={startEditing}
+        onEditSummary={canEdit(summary) ? startEditing : undefined}
+        onDeleteSummary={canEdit(summary) ? handleDelete : undefined}
       />
 
       <main className="max-w-3xl mx-auto px-4 py-10">

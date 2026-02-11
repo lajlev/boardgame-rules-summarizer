@@ -8,6 +8,7 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   query,
   orderBy,
   where,
@@ -58,6 +59,10 @@ export async function getAllSummaries() {
   const q = query(collection(db, "summaries"), orderBy("createdAt", "desc"));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function deleteSummary(id) {
+  await deleteDoc(doc(db, "summaries", id));
 }
 
 export async function findSummariesByFilename(filename) {

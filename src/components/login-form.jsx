@@ -34,7 +34,7 @@ export default function LoginForm({ onSuccess, defaultMode = "login" }) {
       if (mode === "signup") {
         await signup(email, password);
         setInfo(
-          "Verification email sent. Please check your inbox and verify your email before signing in.",
+          "Verification email sent! Check your inbox (and spam folder) and verify your email before signing in.",
         );
         setMode("login");
         setPassword("");
@@ -48,7 +48,7 @@ export default function LoginForm({ onSuccess, defaultMode = "login" }) {
           await sendEmailVerification(cred.user);
           await signOut(auth);
           setInfo(
-            "Please verify your email first. A new verification link has been sent.",
+            "Please verify your email first. A new verification link has been sent — check your spam folder if you don't see it.",
           );
           return;
         }
