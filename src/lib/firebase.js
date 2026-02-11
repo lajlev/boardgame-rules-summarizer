@@ -10,6 +10,7 @@ import {
   updateDoc,
   query,
   orderBy,
+  where,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -57,4 +58,13 @@ export async function getAllSummaries() {
   const q = query(collection(db, "summaries"), orderBy("createdAt", "desc"));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function findSummariesByFilename(filename) {
+  const all = await getAllSummaries();
+  return all.filter((s) =>
+    s.originalFilename
+      ?.split(", ")
+      .some((f) => f.toLowerCase() === filename.toLowerCase()),
+  );
 }

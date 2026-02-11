@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, X } from "lucide-react";
 import Loader from "@/components/loader";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
-import { saveSummary } from "@/lib/firebase";
+import { saveSummary, findSummariesByFilename } from "@/lib/firebase";
 import { nanoid } from "nanoid";
 import OpenAI from "openai";
 
@@ -62,10 +62,11 @@ export default function UploadForm() {
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [duplicates, setDuplicates] = useState([]);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
-  const addFiles = (newFiles) => {
+  const addFiles = async (newFiles) => {
     const pdfs = Array.from(newFiles).filter(
       (f) => f.type === "application/pdf",
     );
@@ -75,10 +76,30 @@ export default function UploadForm() {
     }
     setFiles((prev) => [...prev, ...pdfs]);
     setError("");
+    setDuplicates([]);
+
+    // Check for existing summaries with same filename
+    const found = [];
+    for (const f of pdfs) {
+      const matches = await findSummariesByFilename(f.name);
+      if (matches.length > 0) {
+        found.push({ filename: f.name, summaries: matches });
+      }
+    }
+    if (found.length > 0) {
+      setDuplicates(found);
+    }
   };
 
   const removeFile = (index) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setFiles((prev) => {
+      const updated = prev.filter((_, i) => i !== index);
+      const remaining = updated.map((f) => f.name.toLowerCase());
+      setDuplicates((d) =>
+        d.filter((dup) => remaining.includes(dup.filename.toLowerCase())),
+      );
+      return updated;
+    });
   };
 
   const handleDrop = useCallback((e) => {
@@ -244,6 +265,32 @@ export default function UploadForm() {
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
+
+        {duplicates.length > 0 && (
+          <div className="rounded-md border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 p-3 space-y-1">
+            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+              A summary already exists for:
+            </p>
+            {duplicates.map((dup) => (
+              <p
+                key={dup.filename}
+                className="text-sm text-yellow-700 dark:text-yellow-300"
+              >
+                <span className="font-medium">{dup.filename}</span>
+                {" — "}
+                <a
+                  href={`/summary/${dup.summaries[0].id}`}
+                  className="underline underline-offset-2 hover:text-yellow-900 dark:hover:text-yellow-100"
+                >
+                  {dup.summaries[0].gameTitle}
+                </a>
+              </p>
+            ))}
+            <p className="text-xs text-yellow-600 dark:text-yellow-400 pt-1">
+              You can still upload to create a new summary.
+            </p>
+          </div>
+        )}
 
         <Button
           onClick={handleSubmit}
