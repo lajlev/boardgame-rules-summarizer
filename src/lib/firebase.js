@@ -6,6 +6,7 @@ import {
   setDoc,
   getDoc,
   getDocs,
+  updateDoc,
   query,
   orderBy,
 } from "firebase/firestore";
@@ -37,6 +38,17 @@ export async function getSummary(id) {
   const snap = await getDoc(doc(db, "summaries", id));
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() };
+}
+
+export async function updateSummary(id, data) {
+  const docRef = doc(db, "summaries", id);
+  const timeout = new Promise((_, reject) =>
+    setTimeout(
+      () => reject(new Error("Firestore update timed out after 15s")),
+      15000,
+    ),
+  );
+  await Promise.race([updateDoc(docRef, data), timeout]);
 }
 
 export async function getAllSummaries() {

@@ -13,9 +13,22 @@ import {
   FileDown,
   Moon,
   Sun,
+  Pencil,
+  ExternalLink,
 } from "lucide-react";
-import { getSummary } from "@/lib/firebase";
+import { getSummary, updateSummary } from "@/lib/firebase";
 import { timeAgo } from "@/lib/time";
+
+const ADMIN_PASSWORD_HASH = import.meta.env.VITE_ADMIN_PASSWORD_HASH;
+
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 export default function SummaryPage() {
   const { id } = useParams();
@@ -34,6 +47,17 @@ export default function SummaryPage() {
         window.matchMedia("(prefers-color-scheme: dark)").matches)
     );
   });
+
+  // Admin state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editMarkdown, setEditMarkdown] = useState("");
+  const [editBggLink, setEditBggLink] = useState("");
+  const [saving, setSaving] = useState(false);
+
   const menuRef = useRef(null);
   const searchInputDesktopRef = useRef(null);
   const searchInputMobileRef = useRef(null);
@@ -110,7 +134,6 @@ export default function SummaryPage() {
   // Focus search input when opened
   useEffect(() => {
     if (searchOpen) {
-      // Small delay to let the DOM render
       requestAnimationFrame(() => {
         if (searchInputDesktopRef.current)
           searchInputDesktopRef.current.focus();
@@ -134,6 +157,60 @@ export default function SummaryPage() {
       setSearchOpen(false);
     } else {
       setSearchOpen(true);
+    }
+  };
+
+  const handleAdminLogin = async (e) => {
+    e.preventDefault();
+    const hash = await hashPassword(adminPassword);
+    if (hash === ADMIN_PASSWORD_HASH) {
+      setIsAdmin(true);
+      setShowAdminLogin(false);
+      setAdminPassword("");
+      setAdminError("");
+      setMenuOpen(false);
+    } else {
+      setAdminError("Incorrect password.");
+    }
+  };
+
+  const startEditing = () => {
+    setEditMarkdown(summary.markdown);
+    setEditBggLink(summary.bggLink || "");
+    setEditing(true);
+    setMenuOpen(false);
+  };
+
+  const cancelEditing = () => {
+    setEditing(false);
+    setEditMarkdown("");
+    setEditBggLink("");
+  };
+
+  const saveEdits = async () => {
+    setSaving(true);
+    try {
+      const updates = { markdown: editMarkdown };
+
+      const titleMatch = editMarkdown.match(/^##\s+(.+?)(?:\s*\(|$)/m);
+      if (titleMatch) {
+        updates.gameTitle = titleMatch[1].trim();
+      }
+
+      if (editBggLink.trim()) {
+        updates.bggLink = editBggLink.trim();
+      } else {
+        updates.bggLink = "";
+      }
+
+      await updateSummary(id, updates);
+      setSummary((prev) => ({ ...prev, ...updates }));
+      setEditing(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save: " + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -288,6 +365,26 @@ export default function SummaryPage() {
                   )}
                   {dark ? "Light mode" : "Dark mode"}
                 </button>
+                {isAdmin ? (
+                  <button
+                    onClick={startEditing}
+                    className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Edit Summary
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowAdminLogin(true);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Admin Login
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -345,8 +442,94 @@ export default function SummaryPage() {
         )}
       </header>
 
+      {/* Admin login modal */}
+      {showAdminLogin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 no-print">
+          <div className="bg-background border rounded-lg shadow-lg p-6 w-full max-w-sm mx-4">
+            <h3 className="text-sm font-semibold mb-3">Admin Login</h3>
+            <form onSubmit={handleAdminLogin} className="space-y-3">
+              <Input
+                type="password"
+                placeholder="Enter admin password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                autoFocus
+              />
+              {adminError && (
+                <p className="text-sm text-destructive">{adminError}</p>
+              )}
+              <div className="flex gap-2 justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowAdminLogin(false);
+                    setAdminPassword("");
+                    setAdminError("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm">
+                  Login
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-3xl mx-auto px-4 py-10">
-        <div className="prose" dangerouslySetInnerHTML={{ __html: html }} />
+        {/* BGG Link */}
+        {summary.bggLink && !editing && (
+          <div className="mb-4 no-print">
+            <a
+              href={summary.bggLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              View on BGG
+            </a>
+          </div>
+        )}
+
+        {editing ? (
+          <div className="space-y-4 no-print">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">
+                BGG Link (optional)
+              </label>
+              <Input
+                placeholder="https://boardgamegeek.com/boardgame/..."
+                value={editBggLink}
+                onChange={(e) => setEditBggLink(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">
+                Rules Summary (Markdown)
+              </label>
+              <textarea
+                value={editMarkdown}
+                onChange={(e) => setEditMarkdown(e.target.value)}
+                className="w-full min-h-[60vh] p-3 rounded-md border border-input bg-background text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={cancelEditing}>
+                Cancel
+              </Button>
+              <Button onClick={saveEdits} disabled={saving}>
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="prose" dangerouslySetInnerHTML={{ __html: html }} />
+        )}
       </main>
 
       <footer className="border-t no-print">

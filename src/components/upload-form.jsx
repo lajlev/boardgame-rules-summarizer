@@ -3,14 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, Lock, FileText } from "lucide-react";
+import { Upload, Lock, FileText, X } from "lucide-react";
 import Loader from "@/components/loader";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 import { saveSummary } from "@/lib/firebase";
 import { nanoid } from "nanoid";
 import OpenAI from "openai";
 
-const PASSWORD_HASH = import.meta.env.VITE_APP_PASSWORD_HASH;
+const ADMIN_PASSWORD_HASH = import.meta.env.VITE_ADMIN_PASSWORD_HASH;
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const OPENAI_MODEL = import.meta.env.VITE_OPENAI_MODEL || "gpt-5";
 
@@ -70,7 +70,8 @@ export default function UploadForm() {
   const [unlocked, setUnlocked] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [bggLink, setBggLink] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -80,7 +81,7 @@ export default function UploadForm() {
   const handleUnlock = async (e) => {
     e.preventDefault();
     const hash = await hashPassword(password);
-    if (hash === PASSWORD_HASH) {
+    if (hash === ADMIN_PASSWORD_HASH) {
       setUnlocked(true);
       setPasswordError("");
     } else {
@@ -88,34 +89,47 @@ export default function UploadForm() {
     }
   };
 
-  const handleFile = (f) => {
-    if (f && f.type === "application/pdf") {
-      setFile(f);
-      setError("");
-    } else {
-      setError("Please select a PDF file.");
+  const addFiles = (newFiles) => {
+    const pdfs = Array.from(newFiles).filter(
+      (f) => f.type === "application/pdf",
+    );
+    if (pdfs.length === 0) {
+      setError("Please select PDF files.");
+      return;
     }
+    setFiles((prev) => [...prev, ...pdfs]);
+    setError("");
+  };
+
+  const removeFile = (index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setDragOver(false);
-    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
   }, []);
 
   const handleSubmit = async () => {
-    if (!file) return;
+    if (files.length === 0) return;
     setLoading(true);
     setError("");
 
     try {
-      const pdfText = await extractTextFromPdf(file);
-
-      if (!pdfText || pdfText.trim().length < 50) {
-        throw new Error(
-          "Could not extract enough text from the PDF. It may be image-based.",
-        );
+      // Extract text from all PDFs
+      const allTexts = [];
+      for (const file of files) {
+        const pdfText = await extractTextFromPdf(file);
+        if (!pdfText || pdfText.trim().length < 50) {
+          throw new Error(
+            `Could not extract enough text from ${file.name}. It may be image-based.`,
+          );
+        }
+        allTexts.push(pdfText);
       }
+
+      const combinedText = allTexts.join("\n\n--- Next document ---\n\n");
 
       const openai = new OpenAI({
         apiKey: OPENAI_API_KEY,
@@ -125,7 +139,7 @@ export default function UploadForm() {
       console.log("[OpenAI] Sending request to model:", OPENAI_MODEL);
       console.log(
         "[OpenAI] Prompt length:",
-        SYSTEM_PROMPT.length + pdfText.length,
+        SYSTEM_PROMPT.length + combinedText.length,
         "chars",
       );
 
@@ -135,7 +149,7 @@ export default function UploadForm() {
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
-            content: `Here is the full text of the board game rulebook:\n\n${pdfText}`,
+            content: `Here is the full text of the board game rulebook:\n\n${combinedText}`,
           },
         ],
       });
@@ -148,17 +162,23 @@ export default function UploadForm() {
       const titleMatch = markdown.match(/^##\s+(.+?)(?:\s*\(|$)/m);
       const gameTitle = titleMatch
         ? titleMatch[1].trim()
-        : file.name.replace(/\.pdf$/i, "");
+        : files[0].name.replace(/\.pdf$/i, "");
       console.log("[Summary] Game title:", gameTitle);
 
       const id = nanoid(10);
       console.log("[Firestore] Saving summary with id:", id);
 
-      await saveSummary(id, {
+      const summaryData = {
         gameTitle,
-        originalFilename: file.name,
+        originalFilename: files.map((f) => f.name).join(", "),
         markdown,
-      });
+      };
+
+      if (bggLink.trim()) {
+        summaryData.bggLink = bggLink.trim();
+      }
+
+      await saveSummary(id, summaryData);
 
       console.log("[Firestore] Save complete. Navigating to summary.");
       navigate(`/summary/${id}`);
@@ -184,7 +204,7 @@ export default function UploadForm() {
           <form onSubmit={handleUnlock} className="flex gap-2">
             <Input
               type="password"
-              placeholder="Enter password"
+              placeholder="Enter admin password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -221,16 +241,36 @@ export default function UploadForm() {
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
         >
-          {file ? (
-            <div className="flex items-center justify-center gap-2 text-sm">
-              <FileText className="w-5 h-5 text-primary" />
-              <span className="font-medium">{file.name}</span>
+          {files.length > 0 ? (
+            <div className="space-y-1">
+              {files.map((f, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-center gap-2 text-sm"
+                >
+                  <FileText className="w-4 h-4 text-primary shrink-0" />
+                  <span className="font-medium truncate">{f.name}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(i);
+                    }}
+                    className="text-muted-foreground hover:text-destructive shrink-0"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground mt-2">
+                Click or drag to add more PDFs
+              </p>
             </div>
           ) : (
             <div className="space-y-2">
               <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                Click or drag a PDF here
+                Click or drag PDFs here
               </p>
             </div>
           )}
@@ -238,16 +278,30 @@ export default function UploadForm() {
             ref={fileInputRef}
             type="file"
             accept=".pdf,application/pdf"
+            multiple
             className="hidden"
-            onChange={(e) =>
-              e.target.files.length && handleFile(e.target.files[0])
-            }
+            onChange={(e) => {
+              if (e.target.files.length) addFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </div>
+
+        <div>
+          <Input
+            placeholder="BGG link (optional)"
+            value={bggLink}
+            onChange={(e) => setBggLink(e.target.value)}
           />
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <Button onClick={handleSubmit} disabled={!file} className="w-full">
+        <Button
+          onClick={handleSubmit}
+          disabled={files.length === 0}
+          className="w-full"
+        >
           Create New Rules Summary
         </Button>
       </CardContent>
