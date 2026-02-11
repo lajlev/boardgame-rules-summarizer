@@ -66,14 +66,9 @@ export default function LoginForm({ onSuccess, defaultMode = "login" }) {
     }
   };
 
-  const handleGoogle = async () => {
+  const handleGoogle = () => {
     setError("");
-    try {
-      await loginWithGoogle();
-      onSuccess?.();
-    } catch (err) {
-      setError(ERROR_MESSAGES[err.code] || "Google sign in failed.");
-    }
+    loginWithGoogle();
   };
 
   return (
