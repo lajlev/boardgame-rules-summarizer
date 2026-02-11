@@ -12,8 +12,10 @@ import {
   FileDown,
   Pencil,
   LogOut,
+  Moon,
+  Sun,
 } from "lucide-react";
-import ThemeToggle from "@/components/theme-toggle";
+import { useTheme } from "@/components/theme-toggle";
 import AuthModal from "@/components/auth-modal";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -54,6 +56,7 @@ export default function AppHeader({
   onEditSummary,
 }) {
   const { user, loading: authLoading, logout } = useAuth();
+  const { dark, toggle: toggleTheme } = useTheme();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -196,6 +199,17 @@ export default function AppHeader({
                       </p>
                     </div>
                     <button
+                      onClick={toggleTheme}
+                      className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent"
+                    >
+                      {dark ? (
+                        <Sun className="w-4 h-4" />
+                      ) : (
+                        <Moon className="w-4 h-4" />
+                      )}
+                      {dark ? "Light Mode" : "Dark Mode"}
+                    </button>
+                    <button
                       onClick={() => {
                         logout();
                         setUserMenuOpen(false);
@@ -218,8 +232,6 @@ export default function AppHeader({
                 Sign In
               </Button>
             ))}
-
-          <ThemeToggle />
 
           {/* Overflow menu (summary page only) */}
           {hasMenu && (
