@@ -34,16 +34,7 @@ export function AuthProvider({ children }) {
     return cred;
   };
 
-  const loginWithGoogle = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      console.log("[Auth] Google sign-in success:", result.user.email);
-      return result;
-    } catch (err) {
-      console.error("[Auth] Google sign-in error:", err.code, err.message);
-      throw err;
-    }
-  };
+  const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
 
   const logout = () => signOut(auth);
 

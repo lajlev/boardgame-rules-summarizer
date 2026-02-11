@@ -14,6 +14,7 @@ import {
   LogOut,
   Moon,
   Sun,
+  FilePlus,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-toggle";
 import AuthModal from "@/components/auth-modal";
@@ -99,11 +100,13 @@ export default function AppHeader({
 
           <div className="mr-auto" />
 
-          <Link to="/upload">
-            <Button variant="outline" size="sm" className="h-8 text-xs">
-              Create Summary
-            </Button>
-          </Link>
+          {!hasMenu && (
+            <Link to="/upload">
+              <Button variant="outline" size="sm" className="h-8 text-xs">
+                Create Summary
+              </Button>
+            </Link>
+          )}
 
           {/* Desktop inline search */}
           {hasSearch && searchOpen && (
@@ -254,6 +257,14 @@ export default function AppHeader({
               </Button>
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 w-48 bg-background border rounded-md shadow-lg py-1 z-20">
+                  <Link
+                    to="/upload"
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full px-3 py-2 text-sm flex items-center gap-2 hover:bg-accent"
+                  >
+                    <FilePlus className="w-4 h-4" />
+                    Create Summary
+                  </Link>
                   <button
                     onClick={() => {
                       onDownloadMarkdown();
