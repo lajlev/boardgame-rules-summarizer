@@ -11,12 +11,30 @@ import {
   MoreVertical,
   FileDown,
   Pencil,
-  LogIn,
   LogOut,
 } from "lucide-react";
 import ThemeToggle from "@/components/theme-toggle";
 import AuthModal from "@/components/auth-modal";
 import { useAuth } from "@/contexts/auth-context";
+
+function UserAvatar({ user }) {
+  if (user.photoURL) {
+    return (
+      <img
+        src={user.photoURL}
+        alt=""
+        className="w-7 h-7 rounded-full object-cover"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+  const initial = (user.displayName || user.email || "?")[0].toUpperCase();
+  return (
+    <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
+      {initial}
+    </div>
+  );
+}
 
 export default function AppHeader({
   // Search props (optional — summary page uses these)
@@ -38,23 +56,32 @@ export default function AppHeader({
   const { user, loading: authLoading, logout } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const userMenuRef = useRef(null);
 
   const hasSearch = onToggleSearch !== undefined;
   const hasPrint = onPrint !== undefined;
   const hasMenu = onDownloadMarkdown !== undefined;
 
-  // Close menu on outside click
+  // Close menus on outside click
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen && !userMenuOpen) return;
     const handleClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
+      if (menuOpen && menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false);
+      }
+      if (
+        userMenuOpen &&
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target)
+      ) {
+        setUserMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [menuOpen]);
+  }, [menuOpen, userMenuOpen]);
 
   return (
     <>
@@ -146,27 +173,49 @@ export default function AppHeader({
             </Button>
           )}
 
-          {/* Sign in / out */}
+          {/* User / sign in */}
           {!authLoading &&
             (user ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={logout}
-                title="Sign Out"
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-1.5 rounded-full hover:opacity-80 transition-opacity"
+                >
+                  <UserAvatar user={user} />
+                </button>
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-56 bg-background border rounded-md shadow-lg py-1 z-20">
+                    <div className="px-3 py-2 border-b">
+                      {user.displayName && (
+                        <p className="text-sm font-medium truncate">
+                          {user.displayName}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        logout();
+                        setUserMenuOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
                 onClick={() => setAuthModalOpen(true)}
-                title="Sign In"
               >
-                <LogIn className="w-4 h-4" />
+                Sign In
               </Button>
             ))}
 
@@ -243,9 +292,7 @@ export default function AppHeader({
             {search.trim() && (
               <>
                 <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums">
-                  {matchCount > 0
-                    ? `${currentMatch + 1}/${matchCount}`
-                    : "0/0"}
+                  {matchCount > 0 ? `${currentMatch + 1}/${matchCount}` : "0/0"}
                 </span>
                 <button
                   onClick={() => onGoToMatch("prev")}
@@ -267,10 +314,7 @@ export default function AppHeader({
         )}
       </header>
 
-      <AuthModal
-        open={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-      />
+      <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </>
   );
 }
